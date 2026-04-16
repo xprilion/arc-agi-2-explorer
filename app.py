@@ -2,8 +2,7 @@
 ARC-AGI Data Explorer — FastAPI + Jinja2 web application.
 
 Run with:
-    cd /Users/xprilion/Work/xprilion/arc-agi-2-kaggle
-    python -m explorer.app
+    uvicorn app:app --reload --host 0.0.0.0 --port 8000
 """
 
 import json
