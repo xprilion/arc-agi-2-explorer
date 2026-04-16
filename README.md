@@ -25,7 +25,7 @@ JSON datasets live under `data/` (included in this repo).
 From the repository root (with the virtual environment activated):
 
 ```bash
-uvicorn app:app --reload --host 127.0.0.1 --port 8000
+PORT=8000 uvicorn app:app --reload --host 127.0.0.1 --port $PORT
 ```
 
 Open [http://127.0.0.1:8000](http://127.0.0.1:8000).

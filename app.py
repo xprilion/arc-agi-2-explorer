@@ -2,7 +2,7 @@
 ARC-AGI Data Explorer — FastAPI + Jinja2 web application.
 
 Run with:
-    uvicorn app:app --reload --host 0.0.0.0 --port 8000
+    PORT=8000 uvicorn app:app --reload --host 0.0.0.0 --port $PORT
 """
 
 import json
@@ -528,9 +528,15 @@ async def submissions_detail(request: Request, dataset_name: str, puzzle_index: 
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
     import uvicorn
+
+    try:
+        port = int(os.getenv("PORT", "8000"))
+    except ValueError:
+        port = 8000
+
     uvicorn.run(
         "explorer.app:app",
-        host="127.0.0.1",
-        port=8000,
+        host="0.0.0.0",
+        port=port,
         reload=True,
     )
