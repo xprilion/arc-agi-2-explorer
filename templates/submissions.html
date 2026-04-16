@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+
+{% set active_dataset = "submissions" %}
+
+{% block title %}Submissions — ARC-AGI Explorer{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+    <a href="/">Home</a><span class="sep">/</span>Submissions
+    {% if detail %}
+        <span class="sep">/</span><span class="mono">{{ detail.puzzle_id }}</span>
+    {% endif %}
+</div>
+
+{% if not detail %}
+{# ================================================================ #}
+{# UPLOAD + SUMMARY VIEW                                            #}
+{# ================================================================ #}
+
+<h1>Submission Evaluator</h1>
+<p style="color: var(--text-muted); margin-bottom: 20px;">
+    Upload a submission JSON file to compare against ground-truth solutions.
+    Scoring uses the Kaggle metric: a test case scores 1 if <em>either</em> attempt exactly matches the solution.
+</p>
+
+{% if error is defined and error %}
+<div class="card" style="border-color: var(--arc-2); margin-bottom: 16px;">
+    <p style="color: var(--arc-2);">{{ error }}</p>
+</div>
+{% endif %}
+
+<!-- Upload form -->
+<div class="card">
+    <h2 style="margin-bottom: 12px;">Upload Submission</h2>
+    <form method="post" action="/submissions/upload" enctype="multipart/form-data">
+        <div class="filters">
+            <div class="filter-group">
+                <label for="dataset">Evaluate Against</label>
+                <select id="dataset" name="dataset" style="background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; font-size: 13px;">
+                    <option value="evaluation" {% if dataset_name is defined and dataset_name == 'evaluation' %}selected{% endif %}>Evaluation (120 puzzles)</option>
+                    <option value="training" {% if dataset_name is defined and dataset_name == 'training' %}selected{% endif %}>Training (1,000 puzzles)</option>
+                    <option value="test" {% if dataset_name is defined and dataset_name == 'test' %}selected{% endif %}>Test (240 puzzles)</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="file">Submission File (.json)</label>
+                <input type="file" id="file" name="file" accept=".json"
+                       style="background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 5px 10px; border-radius: 6px; font-size: 13px;">
+            </div>
+            <div class="filter-group" style="justify-content: flex-end;">
+                <label>&nbsp;</label>
+                <button type="submit">Evaluate</button>
+            </div>
+        </div>
+    </form>
+    {% if submission_name %}
+    <p style="font-size: 13px; color: var(--text-muted); margin-top: 8px;">
+        Current file: <strong style="color: var(--text);">{{ submission_name }}</strong>
+    </p>
+    {% endif %}
+</div>
+
+{% if evaluation %}
+<!-- Score summary -->
+<div class="card">
+    <h2 style="margin-bottom: 12px;">Results</h2>
+    <div class="stats">
+        <div class="stat">
+            <div class="value" style="color: var(--green);">{{ "%.1f" | format(evaluation.score * 100) }}%</div>
+            <div class="label">Score</div>
+        </div>
+        <div class="stat">
+            <div class="value">{{ evaluation.total_correct }}</div>
+            <div class="label">Correct Tests</div>
+        </div>
+        <div class="stat">
+            <div class="value">{{ evaluation.total_tests }}</div>
+            <div class="label">Total Tests</div>
+        </div>
+        <div class="stat">
+            <div class="value">{{ evaluation.total_puzzles }}</div>
+            <div class="label">Puzzles Evaluated</div>
+        </div>
+    </div>
+</div>
+
+<!-- Results table -->
+<div class="section-header">
+    Puzzle Results
+    <span class="badge">{{ evaluation.results | length }} puzzles</span>
+</div>
+
+<div class="card" style="padding: 0; overflow-x: auto;">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Puzzle ID</th>
+                <th>Tests</th>
+                <th>Correct</th>
+                <th>Status</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in evaluation.results %}
+            <tr>
+                <td style="color: var(--text-muted);">{{ loop.index }}</td>
+                <td><span class="mono">{{ r.puzzle_id }}</span></td>
+                <td>{{ r.num_tests }}</td>
+                <td>{{ r.num_correct }} / {{ r.num_tests }}</td>
+                <td>
+                    {% if r.all_correct %}
+                        <span style="color: var(--green); font-weight: 600;">Pass</span>
+                    {% elif r.num_correct > 0 %}
+                        <span style="color: var(--yellow); font-weight: 600;">Partial</span>
+                    {% else %}
+                        <span style="color: var(--arc-2); font-weight: 600;">Fail</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="/submissions/detail/{{ dataset_name }}/{{ loop.index0 }}" class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;">View Diff</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% else %}
+{# ================================================================ #}
+{# DETAIL VIEW for a single puzzle                                  #}
+{# ================================================================ #}
+
+<!-- Macro: render a grid -->
+{% macro render_grid(grid) %}
+{% set rows = grid | length %}
+{% set cols = grid[0] | length if grid else 0 %}
+{% set size_class = "tiny" if (rows > 20 or cols > 20) else ("small" if (rows > 14 or cols > 14) else "") %}
+<div class="arc-grid {{ size_class }}">
+    {% for row in grid %}
+    <div class="arc-grid-row">
+        {% for cell in row %}
+        <div class="arc-cell c{{ cell }}"></div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+</div>
+{% endmacro %}
+
+<!-- Macro: render a diff grid (cells highlighted on mismatch) -->
+{% macro render_diff_grid(diff) %}
+{% set rows = diff | length %}
+{% set cols = diff[0] | length if diff else 0 %}
+{% set size_class = "tiny" if (rows > 20 or cols > 20) else ("small" if (rows > 14 or cols > 14) else "") %}
+<div class="arc-grid {{ size_class }}">
+    {% for row in diff %}
+    <div class="arc-grid-row">
+        {% for cell in row %}
+        {% if cell.match %}
+        <div class="arc-cell c{{ cell.value }}"></div>
+        {% else %}
+        <div class="arc-cell c{{ cell.value }}" style="outline: 2px solid var(--arc-2); outline-offset: -2px; opacity: 0.8;"></div>
+        {% endif %}
+        {% endfor %}
+    </div>
+    {% endfor %}
+</div>
+{% endmacro %}
+
+<h1>
+    <span class="mono">{{ detail.puzzle_id }}</span>
+    <span class="subtitle">— Submission Diff</span>
+</h1>
+
+<!-- Summary -->
+<div class="card">
+    <div class="stats">
+        <div class="stat">
+            <div class="value">{{ detail.num_tests }}</div>
+            <div class="label">Test Cases</div>
+        </div>
+        <div class="stat">
+            <div class="value">{{ detail.num_correct }}</div>
+            <div class="label">Correct</div>
+        </div>
+        <div class="stat">
+            <div class="value">
+                {% if detail.all_correct %}
+                    <span style="color: var(--green);">Pass</span>
+                {% elif detail.num_correct > 0 %}
+                    <span style="color: var(--yellow);">Partial</span>
+                {% else %}
+                    <span style="color: var(--arc-2);">Fail</span>
+                {% endif %}
+            </div>
+            <div class="label">Status</div>
+        </div>
+    </div>
+</div>
+
+{% for t in detail.tests %}
+<div class="card">
+    <div style="font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 12px; display: flex; align-items: center; gap: 10px;">
+        Test {{ t.test_index }}
+        {% if t.correct %}
+            <span style="background: var(--green); color: #000; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 700;">CORRECT</span>
+        {% else %}
+            <span style="background: var(--arc-2); color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 700;">WRONG</span>
+        {% endif %}
+    </div>
+
+    {% if test_inputs is defined and t.test_index - 1 < test_inputs | length %}
+    <div style="margin-bottom: 16px;">
+        <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Input</div>
+        {{ render_grid(test_inputs[t.test_index - 1]) }}
+    </div>
+    {% endif %}
+
+    <div style="display: flex; gap: 32px; flex-wrap: wrap;">
+        <!-- Expected (ground truth) -->
+        {% if t.has_solution %}
+        <div class="grid-panel">
+            <div class="grid-label" style="color: var(--green);">Expected Solution</div>
+            {{ render_grid(t.expected) }}
+            {% set edims = t.expected | length %}
+            {% set ecdims = t.expected[0] | length if t.expected else 0 %}
+            <div class="grid-meta">{{ edims }}&times;{{ ecdims }}</div>
+        </div>
+        {% endif %}
+
+        <!-- Attempt 1 -->
+        <div class="grid-panel">
+            <div class="grid-label" style="color: {% if t.a1_match %}var(--green){% else %}var(--arc-2){% endif %};">
+                Attempt 1 {% if t.a1_match %} &check;{% else %} &cross;{% endif %}
+            </div>
+            {% if t.has_solution and t.a1_diff is defined %}
+                {{ render_diff_grid(t.a1_diff) }}
+            {% else %}
+                {{ render_grid(t.attempt_1) }}
+            {% endif %}
+            {% set a1rows = t.attempt_1 | length %}
+            {% set a1cols = t.attempt_1[0] | length if t.attempt_1 else 0 %}
+            <div class="grid-meta">{{ a1rows }}&times;{{ a1cols }}</div>
+        </div>
+
+        <!-- Attempt 2 -->
+        <div class="grid-panel">
+            <div class="grid-label" style="color: {% if t.a2_match %}var(--green){% else %}var(--arc-2){% endif %};">
+                Attempt 2 {% if t.a2_match %} &check;{% else %} &cross;{% endif %}
+            </div>
+            {% if t.has_solution and t.a2_diff is defined %}
+                {{ render_diff_grid(t.a2_diff) }}
+            {% else %}
+                {{ render_grid(t.attempt_2) }}
+            {% endif %}
+            {% set a2rows = t.attempt_2 | length %}
+            {% set a2cols = t.attempt_2[0] | length if t.attempt_2 else 0 %}
+            <div class="grid-meta">{{ a2rows }}&times;{{ a2cols }}</div>
+        </div>
+    </div>
+
+    {% if not t.has_solution %}
+    <p style="color: var(--yellow); font-size: 13px; margin-top: 8px;">No ground-truth solution available for comparison.</p>
+    {% endif %}
+</div>
+{% endfor %}
+
+<!-- Navigation -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);">
+    <div style="display: flex; gap: 8px;">
+        {% if prev_index is not none %}
+        <a href="/submissions/detail/{{ dataset_name }}/{{ prev_index }}" class="btn btn-secondary">&larr; Previous</a>
+        {% else %}
+        <span class="btn btn-secondary" style="opacity: 0.4; cursor: default;">&larr; Previous</span>
+        {% endif %}
+        <a href="/submissions" class="btn btn-secondary">Back to Results</a>
+    </div>
+    <div>
+        {% if next_index is not none %}
+        <a href="/submissions/detail/{{ dataset_name }}/{{ next_index }}" class="btn btn-secondary">Next &rarr;</a>
+        {% else %}
+        <span class="btn btn-secondary" style="opacity: 0.4; cursor: default;">Next &rarr;</span>
+        {% endif %}
+    </div>
+</div>
+
+{% endif %}
+{% endblock %}

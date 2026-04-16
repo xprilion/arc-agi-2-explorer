@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% set active_dataset = dataset_name %}
+
+{% block title %}{{ puzzle_id }} — ARC-AGI Explorer{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+    <a href="/">Home</a><span class="sep">/</span>
+    <a href="/dataset/{{ dataset_name }}">{{ dataset_label }}</a><span class="sep">/</span>
+    <span class="mono">{{ puzzle_id }}</span>
+</div>
+
+<h1>
+    <span class="mono">{{ puzzle_id }}</span>
+    <span class="subtitle">— {{ dataset_label }} dataset</span>
+</h1>
+
+<!-- Summary card -->
+<div class="card">
+    <div class="stats">
+        <div class="stat">
+            <div class="value">{{ summary.num_train }}</div>
+            <div class="label">Train Pairs</div>
+        </div>
+        <div class="stat">
+            <div class="value">{{ summary.num_test }}</div>
+            <div class="label">Test Cases</div>
+        </div>
+        <div class="stat">
+            <div class="value">{{ summary.max_rows }}&times;{{ summary.max_cols }}</div>
+            <div class="label">Max Grid</div>
+        </div>
+        <div class="stat">
+            <div class="value">{{ summary.min_rows }}&times;{{ summary.min_cols }}</div>
+            <div class="label">Min Grid</div>
+        </div>
+        <div class="stat">
+            <div class="value">{{ summary.num_colors }}</div>
+            <div class="label">Colors Used</div>
+        </div>
+        <div class="stat">
+            <div class="value">{% if summary.has_solution %}<span style="color:var(--green)">Yes</span>{% else %}<span style="color:var(--text-muted)">No</span>{% endif %}</div>
+            <div class="label">Has Solution</div>
+        </div>
+    </div>
+    <div style="margin-top: 12px;">
+        <span style="font-size: 12px; color: var(--text-muted); margin-right: 8px;">Colors:</span>
+        <div class="color-legend" style="display: inline-flex;">
+            {% set color_names = ["Black", "Blue", "Red", "Green", "Yellow", "Gray", "Magenta", "Orange", "Cyan", "Maroon"] %}
+            {% for c in summary.colors %}
+            <div class="color-swatch" style="background: var(--arc-{{ c }});" title="{{ color_names[c] }} ({{ c }})">{{ c }}</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Macro: render a grid -->
+{% macro render_grid(grid) %}
+{% set rows = grid | length %}
+{% set cols = grid[0] | length if grid else 0 %}
+{% set size_class = "tiny" if (rows > 20 or cols > 20) else ("small" if (rows > 14 or cols > 14) else "") %}
+<div class="arc-grid {{ size_class }}">
+    {% for row in grid %}
+    <div class="arc-grid-row">
+        {% for cell in row %}
+        <div class="arc-cell c{{ cell }}"></div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+</div>
+{% endmacro %}
+
+<!-- Training examples -->
+<div class="section-header">
+    Training Examples
+    <span class="badge">{{ train_data | length }} pairs</span>
+</div>
+
+{% for ex in train_data %}
+<div class="card">
+    <div style="font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 12px;">
+        Example {{ ex.index }}
+    </div>
+    <div class="example-pair">
+        <div class="grid-panel">
+            <div class="grid-label">Input</div>
+            {{ render_grid(ex.input) }}
+            <div class="grid-meta">{{ ex.input_dims[0] }}&times;{{ ex.input_dims[1] }} &middot; {{ ex.input_colors | length }} colors</div>
+        </div>
+        <div class="arrow">&rarr;</div>
+        <div class="grid-panel">
+            <div class="grid-label">Output</div>
+            {{ render_grid(ex.output) }}
+            <div class="grid-meta">{{ ex.output_dims[0] }}&times;{{ ex.output_dims[1] }} &middot; {{ ex.output_colors | length }} colors</div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Test examples -->
+<div class="section-header">
+    Test Cases
+    <span class="badge">{{ test_data | length }} cases</span>
+</div>
+
+{% for ex in test_data %}
+<div class="card">
+    <div style="font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 12px;">
+        Test {{ ex.index }}
+    </div>
+    <div class="example-pair">
+        <div class="grid-panel">
+            <div class="grid-label">Input</div>
+            {{ render_grid(ex.input) }}
+            <div class="grid-meta">{{ ex.input_dims[0] }}&times;{{ ex.input_dims[1] }} &middot; {{ ex.input_colors | length }} colors</div>
+        </div>
+
+        {% if ex.solution %}
+        <div class="arrow">&rarr;</div>
+        <div class="grid-panel">
+            <div class="grid-label" style="color: var(--green);">Solution</div>
+            {{ render_grid(ex.solution) }}
+            <div class="grid-meta">{{ ex.solution_dims[0] }}&times;{{ ex.solution_dims[1] }} &middot; {{ ex.solution_colors | length }} colors</div>
+        </div>
+        {% else %}
+        <div class="arrow" style="color: var(--yellow);">?</div>
+        <div class="grid-panel" style="display: flex; align-items: center; justify-content: center; min-width: 120px; min-height: 80px; border: 2px dashed var(--border); border-radius: var(--radius); padding: 20px;">
+            <div style="text-align: center; color: var(--text-muted); font-size: 13px;">
+                No solution<br>available
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endfor %}
+
+<!-- Navigation -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);">
+    <div style="display: flex; gap: 8px;">
+        {% if prev_id %}
+        <a href="/puzzle/{{ dataset_name }}/{{ prev_id }}" class="btn btn-secondary">&larr; Previous</a>
+        {% else %}
+        <span class="btn btn-secondary" style="opacity: 0.4; cursor: default;">&larr; Previous</span>
+        {% endif %}
+        <a href="/dataset/{{ dataset_name }}" class="btn btn-secondary">Back to {{ dataset_label }}</a>
+    </div>
+    <div>
+        {% if next_id %}
+        <a href="/puzzle/{{ dataset_name }}/{{ next_id }}" class="btn btn-secondary">Next &rarr;</a>
+        {% else %}
+        <span class="btn btn-secondary" style="opacity: 0.4; cursor: default;">Next &rarr;</span>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
