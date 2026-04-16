@@ -8,14 +8,14 @@
 <div id="dataset-page" data-name="{{ dataset_name }}">
 
 <div class="breadcrumb">
-    <a href="/">Home</a><span class="sep">/</span>{{ dataset_label }}
+    <a href="{{ base_url }}/">Home</a><span class="sep">/</span>{{ dataset_label }}
 </div>
 
 <h1>{{ dataset_label }} Dataset <span class="subtitle">— <span id="puzzle-total">{{ total }}</span> puzzles</span></h1>
 <p style="color: var(--text-muted); margin-bottom: 20px;">{{ dataset_description }}</p>
 
 <!-- Filters -->
-<form id="filter-form" method="get" action="/dataset/{{ dataset_name }}/">
+<form id="filter-form" method="get" action="{{ base_url }}/dataset/{{ dataset_name }}/">
     <div class="filters">
         <div class="filter-group">
             <label for="q">Puzzle ID</label>
@@ -61,7 +61,7 @@
             {% for p in puzzles %}
             <tr>
                 <td>
-                    <a href="/puzzle/{{ dataset_name }}/{{ p.id }}/" class="mono">{{ p.id }}</a>
+                    <a href="{{ base_url }}/puzzle/{{ dataset_name }}/{{ p.id }}/" class="mono">{{ p.id }}</a>
                 </td>
                 <td>{{ p.num_train }}</td>
                 <td>{{ p.num_test }}</td>
@@ -96,21 +96,21 @@
 <!-- Pagination -->
 <div id="pagination" class="pagination">
 {% if total_pages > 1 %}
-    {% set base_url = "/dataset/" ~ dataset_name ~ "/?q=" ~ q ~ "&sort=" ~ sort ~ "&per_page=" ~ per_page %}
-    {% if min_size is not none %}{% set base_url = base_url ~ "&min_size=" ~ min_size %}{% endif %}
-    {% if max_size is not none %}{% set base_url = base_url ~ "&max_size=" ~ max_size %}{% endif %}
-    {% if min_examples is not none %}{% set base_url = base_url ~ "&min_examples=" ~ min_examples %}{% endif %}
+    {% set pagination_url = base_url ~ "/dataset/" ~ dataset_name ~ "/?q=" ~ q ~ "&sort=" ~ sort ~ "&per_page=" ~ per_page %}
+    {% if min_size is not none %}{% set pagination_url = pagination_url ~ "&min_size=" ~ min_size %}{% endif %}
+    {% if max_size is not none %}{% set pagination_url = pagination_url ~ "&max_size=" ~ max_size %}{% endif %}
+    {% if min_examples is not none %}{% set pagination_url = pagination_url ~ "&min_examples=" ~ min_examples %}{% endif %}
 
     {% if page > 1 %}
-        <a href="{{ base_url }}&page=1" class="btn btn-secondary">First</a>
-        <a href="{{ base_url }}&page={{ page - 1 }}" class="btn btn-secondary">Prev</a>
+        <a href="{{ pagination_url }}&page=1" class="btn btn-secondary">First</a>
+        <a href="{{ pagination_url }}&page={{ page - 1 }}" class="btn btn-secondary">Prev</a>
     {% endif %}
 
     <span class="page-info">Page {{ page }} of {{ total_pages }} ({{ total }} puzzles)</span>
 
     {% if page < total_pages %}
-        <a href="{{ base_url }}&page={{ page + 1 }}" class="btn btn-secondary">Next</a>
-        <a href="{{ base_url }}&page={{ total_pages }}" class="btn btn-secondary">Last</a>
+        <a href="{{ pagination_url }}&page={{ page + 1 }}" class="btn btn-secondary">Next</a>
+        <a href="{{ pagination_url }}&page={{ total_pages }}" class="btn btn-secondary">Last</a>
     {% endif %}
 {% endif %}
 </div>

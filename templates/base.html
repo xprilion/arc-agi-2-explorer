@@ -414,12 +414,12 @@
 </head>
 <body>
     <nav>
-        <a href="/" class="brand">ARC-AGI Explorer</a>
+        <a href="{{ base_url }}/" class="brand">ARC-AGI Explorer</a>
         <div class="nav-links">
-            <a href="/dataset/training/" {% if active_dataset == "training" %}class="active"{% endif %}>Training</a>
-            <a href="/dataset/evaluation/" {% if active_dataset == "evaluation" %}class="active"{% endif %}>Evaluation</a>
-            <a href="/dataset/test/" {% if active_dataset == "test" %}class="active"{% endif %}>Test</a>
-            <a href="/submissions/" {% if active_dataset == "submissions" %}class="active"{% endif %}>Submissions</a>
+            <a href="{{ base_url }}/dataset/training/" {% if active_dataset == "training" %}class="active"{% endif %}>Training</a>
+            <a href="{{ base_url }}/dataset/evaluation/" {% if active_dataset == "evaluation" %}class="active"{% endif %}>Evaluation</a>
+            <a href="{{ base_url }}/dataset/test/" {% if active_dataset == "test" %}class="active"{% endif %}>Test</a>
+            <a href="{{ base_url }}/submissions/" {% if active_dataset == "submissions" %}class="active"{% endif %}>Submissions</a>
         </div>
     </nav>
 
@@ -435,7 +435,8 @@
         <a href="https://github.com/xprilion" target="_blank" rel="noopener noreferrer">GitHub</a>
     </footer>
 
-    <script src="/assets/app.js"></script>
+    <script>window.BASE_URL = "{{ base_url }}";</script>
+    <script src="{{ base_url }}/assets/app.js"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

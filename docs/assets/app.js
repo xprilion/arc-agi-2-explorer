@@ -7,6 +7,9 @@
  * - Grid rendering
  */
 
+// Base URL for all absolute paths (set by the template via window.BASE_URL).
+const BASE_URL = window.BASE_URL || '';
+
 // ============================================================================
 // Utility Functions
 // ============================================================================
@@ -201,7 +204,7 @@ async function loadPuzzleIndex() {
     if (puzzleIndex) return puzzleIndex;
     
     try {
-        const response = await fetch('/data/puzzle-index.json');
+        const response = await fetch(`${BASE_URL}/data/puzzle-index.json`);
         puzzleIndex = await response.json();
         return puzzleIndex;
     } catch (error) {
@@ -279,7 +282,7 @@ function renderPuzzleTable(puzzles, datasetName) {
         tbody.innerHTML = pagePuzzles.map(p => `
             <tr>
                 <td>
-                    <a href="/puzzle/${datasetName}/${p.id}/" class="mono">${p.id}</a>
+                    <a href="${BASE_URL}/puzzle/${datasetName}/${p.id}/" class="mono">${p.id}</a>
                 </td>
                 <td>${p.num_train}</td>
                 <td>${p.num_test}</td>
@@ -451,8 +454,8 @@ async function loadSolutions(datasetName) {
     
     try {
         const [solResponse, chalResponse] = await Promise.all([
-            fetch(`/data/${solutionFiles[datasetName]}`),
-            fetch(`/data/${challengeFiles[datasetName]}`),
+            fetch(`${BASE_URL}/data/${solutionFiles[datasetName]}`),
+            fetch(`${BASE_URL}/data/${challengeFiles[datasetName]}`),
         ]);
         
         solutionsData = await solResponse.json();

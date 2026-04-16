@@ -11,7 +11,7 @@
 
 <div style="display: grid; gap: 16px;">
 {% for ds in datasets %}
-    <a href="/dataset/{{ ds.key }}/" style="text-decoration: none; color: inherit;">
+    <a href="{{ base_url }}/dataset/{{ ds.key }}/" style="text-decoration: none; color: inherit;">
         <div class="card" style="transition: border-color 0.15s; cursor: pointer;" 
              onmouseover="this.style.borderColor='var(--accent)'" 
              onmouseout="this.style.borderColor='var(--border)'">
@@ -40,7 +40,7 @@
 {% endfor %}
 </div>
 
-<a href="/submissions/" style="text-decoration: none; color: inherit;">
+<a href="{{ base_url }}/submissions/" style="text-decoration: none; color: inherit;">
     <div class="card" style="margin-top: 16px; transition: border-color 0.15s; cursor: pointer;"
          onmouseover="this.style.borderColor='var(--accent)'"
          onmouseout="this.style.borderColor='var(--border)'">

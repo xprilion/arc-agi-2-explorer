@@ -16,12 +16,17 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 
 # ---------------------------------------------------------------------------
-# Paths
+# Paths & Config
 # ---------------------------------------------------------------------------
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 TEMPLATES_DIR = BASE_DIR / "templates"
 OUTPUT_DIR = BASE_DIR / "docs"
+
+# Base URL path for the deployed site (no trailing slash).
+# For GitHub Pages at https://xprilion.com/arc-agi-2-explorer/ set this to "/arc-agi-2-explorer".
+# For serving at the root of a domain, set this to "".
+BASE_URL = os.environ.get("BASE_URL", "/arc-agi-2-explorer")
 
 # ---------------------------------------------------------------------------
 # Load data
@@ -368,6 +373,7 @@ def main():
     
     # Set up Jinja2 environment
     env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)))
+    env.globals["base_url"] = BASE_URL
     
     print("\nBuilding pages...")
     
