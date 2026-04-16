@@ -5,15 +5,17 @@
 {% block title %}{{ dataset_label }} Dataset — ARC-AGI Explorer{% endblock %}
 
 {% block content %}
+<div id="dataset-page" data-name="{{ dataset_name }}">
+
 <div class="breadcrumb">
     <a href="/">Home</a><span class="sep">/</span>{{ dataset_label }}
 </div>
 
-<h1>{{ dataset_label }} Dataset <span class="subtitle">— {{ total }} puzzles</span></h1>
+<h1>{{ dataset_label }} Dataset <span class="subtitle">— <span id="puzzle-total">{{ total }}</span> puzzles</span></h1>
 <p style="color: var(--text-muted); margin-bottom: 20px;">{{ dataset_description }}</p>
 
 <!-- Filters -->
-<form method="get" action="/dataset/{{ dataset_name }}">
+<form id="filter-form" method="get" action="/dataset/{{ dataset_name }}/">
     <div class="filters">
         <div class="filter-group">
             <label for="q">Puzzle ID</label>
@@ -31,18 +33,14 @@
             <label for="min_examples">Min Train Examples</label>
             <input type="number" id="min_examples" name="min_examples" value="{{ min_examples if min_examples is not none else '' }}" placeholder="1" min="1">
         </div>
-        <input type="hidden" name="sort" value="{{ sort }}">
-        <input type="hidden" name="per_page" value="{{ per_page }}">
         <div class="filter-group" style="justify-content: flex-end;">
             <label>&nbsp;</label>
             <button type="submit">Filter</button>
         </div>
-        {% if q or min_size is not none or max_size is not none or min_examples is not none %}
         <div class="filter-group" style="justify-content: flex-end;">
             <label>&nbsp;</label>
-            <a href="/dataset/{{ dataset_name }}" class="btn btn-secondary">Clear</a>
+            <a href="#" id="clear-filters" class="btn btn-secondary">Clear</a>
         </div>
-        {% endif %}
     </div>
 </form>
 
@@ -51,49 +49,19 @@
     <table class="data-table">
         <thead>
             <tr>
-                <th>
-                    {% set sort_url = "/dataset/" ~ dataset_name ~ "?q=" ~ q ~ "&sort=id&page=1&per_page=" ~ per_page %}
-                    {% if min_size is not none %}{% set sort_url = sort_url ~ "&min_size=" ~ min_size %}{% endif %}
-                    {% if max_size is not none %}{% set sort_url = sort_url ~ "&max_size=" ~ max_size %}{% endif %}
-                    {% if min_examples is not none %}{% set sort_url = sort_url ~ "&min_examples=" ~ min_examples %}{% endif %}
-                    <a href="{{ sort_url }}" {% if sort == 'id' %}class="active-sort"{% endif %}>Puzzle ID</a>
-                </th>
-                <th>
-                    {% set sort_url = "/dataset/" ~ dataset_name ~ "?q=" ~ q ~ "&sort=train&page=1&per_page=" ~ per_page %}
-                    {% if min_size is not none %}{% set sort_url = sort_url ~ "&min_size=" ~ min_size %}{% endif %}
-                    {% if max_size is not none %}{% set sort_url = sort_url ~ "&max_size=" ~ max_size %}{% endif %}
-                    {% if min_examples is not none %}{% set sort_url = sort_url ~ "&min_examples=" ~ min_examples %}{% endif %}
-                    <a href="{{ sort_url }}" {% if sort == 'train' %}class="active-sort"{% endif %}>Train</a>
-                </th>
-                <th>
-                    {% set sort_url = "/dataset/" ~ dataset_name ~ "?q=" ~ q ~ "&sort=test&page=1&per_page=" ~ per_page %}
-                    {% if min_size is not none %}{% set sort_url = sort_url ~ "&min_size=" ~ min_size %}{% endif %}
-                    {% if max_size is not none %}{% set sort_url = sort_url ~ "&max_size=" ~ max_size %}{% endif %}
-                    {% if min_examples is not none %}{% set sort_url = sort_url ~ "&min_examples=" ~ min_examples %}{% endif %}
-                    <a href="{{ sort_url }}" {% if sort == 'test' %}class="active-sort"{% endif %}>Test</a>
-                </th>
-                <th>
-                    {% set sort_url = "/dataset/" ~ dataset_name ~ "?q=" ~ q ~ "&sort=size&page=1&per_page=" ~ per_page %}
-                    {% if min_size is not none %}{% set sort_url = sort_url ~ "&min_size=" ~ min_size %}{% endif %}
-                    {% if max_size is not none %}{% set sort_url = sort_url ~ "&max_size=" ~ max_size %}{% endif %}
-                    {% if min_examples is not none %}{% set sort_url = sort_url ~ "&min_examples=" ~ min_examples %}{% endif %}
-                    <a href="{{ sort_url }}" {% if sort == 'size' %}class="active-sort"{% endif %}>Max Grid Size</a>
-                </th>
-                <th>
-                    {% set sort_url = "/dataset/" ~ dataset_name ~ "?q=" ~ q ~ "&sort=colors&page=1&per_page=" ~ per_page %}
-                    {% if min_size is not none %}{% set sort_url = sort_url ~ "&min_size=" ~ min_size %}{% endif %}
-                    {% if max_size is not none %}{% set sort_url = sort_url ~ "&max_size=" ~ max_size %}{% endif %}
-                    {% if min_examples is not none %}{% set sort_url = sort_url ~ "&min_examples=" ~ min_examples %}{% endif %}
-                    <a href="{{ sort_url }}" {% if sort == 'colors' %}class="active-sort"{% endif %}>Colors</a>
-                </th>
+                <th><a href="#" data-sort="id" class="active-sort">Puzzle ID</a></th>
+                <th><a href="#" data-sort="train">Train</a></th>
+                <th><a href="#" data-sort="test">Test</a></th>
+                <th><a href="#" data-sort="size">Max Grid Size</a></th>
+                <th><a href="#" data-sort="colors">Colors</a></th>
                 <th>Solution</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody id="puzzle-tbody">
             {% for p in puzzles %}
             <tr>
                 <td>
-                    <a href="/puzzle/{{ dataset_name }}/{{ p.id }}" class="mono">{{ p.id }}</a>
+                    <a href="/puzzle/{{ dataset_name }}/{{ p.id }}/" class="mono">{{ p.id }}</a>
                 </td>
                 <td>{{ p.num_train }}</td>
                 <td>{{ p.num_test }}</td>
@@ -126,9 +94,9 @@
 </div>
 
 <!-- Pagination -->
+<div id="pagination" class="pagination">
 {% if total_pages > 1 %}
-<div class="pagination">
-    {% set base_url = "/dataset/" ~ dataset_name ~ "?q=" ~ q ~ "&sort=" ~ sort ~ "&per_page=" ~ per_page %}
+    {% set base_url = "/dataset/" ~ dataset_name ~ "/?q=" ~ q ~ "&sort=" ~ sort ~ "&per_page=" ~ per_page %}
     {% if min_size is not none %}{% set base_url = base_url ~ "&min_size=" ~ min_size %}{% endif %}
     {% if max_size is not none %}{% set base_url = base_url ~ "&max_size=" ~ max_size %}{% endif %}
     {% if min_examples is not none %}{% set base_url = base_url ~ "&min_examples=" ~ min_examples %}{% endif %}
@@ -144,7 +112,8 @@
         <a href="{{ base_url }}&page={{ page + 1 }}" class="btn btn-secondary">Next</a>
         <a href="{{ base_url }}&page={{ total_pages }}" class="btn btn-secondary">Last</a>
     {% endif %}
-</div>
 {% endif %}
+</div>
 
+</div>
 {% endblock %}
