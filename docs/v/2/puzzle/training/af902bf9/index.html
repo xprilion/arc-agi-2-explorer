@@ -1,0 +1,2794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>af902bf9 — ARC-AGI 2 — ARC-AGI Explorer</title>
+    <style>
+        /* ---- Reset & Base ---- */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0d1117;
+            --bg-card: #161b22;
+            --bg-hover: #1c2333;
+            --border: #30363d;
+            --text: #e6edf3;
+            --text-muted: #8b949e;
+            --accent: #58a6ff;
+            --accent-hover: #79c0ff;
+            --green: #3fb950;
+            --yellow: #d29922;
+            --radius: 8px;
+
+            /* ARC-AGI color palette */
+            --arc-0: #000000;
+            --arc-1: #0074D9;
+            --arc-2: #FF4136;
+            --arc-3: #2ECC40;
+            --arc-4: #FFDC00;
+            --arc-5: #AAAAAA;
+            --arc-6: #F012BE;
+            --arc-7: #FF851B;
+            --arc-8: #7FDBFF;
+            --arc-9: #870C25;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { color: var(--accent-hover); text-decoration: underline; }
+
+        /* ---- Nav ---- */
+        nav {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        nav .nav-top {
+            display: contents;
+        }
+        nav .brand {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.5px;
+            white-space: nowrap;
+        }
+        nav .brand:hover { text-decoration: none; }
+
+        /* Hamburger button - hidden on desktop */
+        nav .nav-toggle {
+            display: none;
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-muted);
+            padding: 6px 8px;
+            cursor: pointer;
+            margin-left: auto;
+            line-height: 1;
+            font-size: 18px;
+            transition: all 0.15s;
+        }
+        nav .nav-toggle:hover {
+            color: var(--text);
+            border-color: var(--text-muted);
+            background: var(--bg-hover);
+        }
+
+        /* Desktop: inline links */
+        nav .nav-links {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        /* Desktop: nav-group is inline flex, just groups links */
+        nav .nav-group {
+            display: contents;
+        }
+        nav .nav-links a {
+            color: var(--text-muted);
+            font-size: 14px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.15s;
+        }
+        nav .nav-links a:hover {
+            color: var(--text);
+            background: var(--bg-hover);
+            text-decoration: none;
+        }
+        nav .nav-links a.active {
+            color: var(--accent);
+        }
+        nav .nav-sep {
+            color: var(--border);
+            font-size: 14px;
+            user-select: none;
+            padding: 0 2px;
+        }
+        nav .nav-version-label {
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 4px 8px;
+            background: var(--bg);
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+
+        /* Mobile nav group headers (hidden on desktop) */
+        nav .nav-group-label {
+            display: none;
+        }
+
+        /* ---- Container ---- */
+        .container {
+            flex: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+            width: 100%;
+        }
+
+        /* ---- Cards ---- */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+        .card h2 {
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+        .card p {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        /* ---- Stats row ---- */
+        .stats {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+        .stat {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px 14px;
+            text-align: center;
+            min-width: 100px;
+        }
+        .stat .value {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        .stat .label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* ---- Table ---- */
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        table.data-table th,
+        table.data-table td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        table.data-table th {
+            color: var(--text-muted);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            position: sticky;
+            top: 53px;
+            background: var(--bg-card);
+            z-index: 10;
+        }
+        table.data-table th a {
+            color: var(--text-muted);
+        }
+        table.data-table th a.active-sort {
+            color: var(--accent);
+        }
+        table.data-table tr:hover td {
+            background: var(--bg-hover);
+        }
+        table.data-table .mono {
+            font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+            font-size: 13px;
+        }
+
+        /* ---- Forms / Filters ---- */
+        .filters {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            margin-bottom: 20px;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .filter-group label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .filter-group input, .filter-group select {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            outline: none;
+        }
+        .filter-group input:focus, .filter-group select:focus {
+            border-color: var(--accent);
+        }
+        .filter-group input[type="text"] { width: 200px; }
+        .filter-group input[type="number"] { width: 80px; }
+
+        button, .btn {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 7px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+            display: inline-block;
+        }
+        button:hover, .btn:hover {
+            background: var(--accent-hover);
+            text-decoration: none;
+        }
+        .btn-secondary {
+            background: var(--bg);
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover {
+            color: var(--text);
+            border-color: var(--text-muted);
+        }
+
+        /* ---- Pagination ---- */
+        .pagination {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            justify-content: center;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        .pagination .page-info {
+            color: var(--text-muted);
+            margin: 0 12px;
+        }
+
+        /* ---- Grid rendering ---- */
+        .arc-grid {
+            display: inline-block;
+            border: 2px solid var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+            line-height: 0;
+        }
+        .arc-grid-row {
+            display: flex;
+        }
+        .arc-cell {
+            width: 24px;
+            height: 24px;
+            border: 0.5px solid rgba(255,255,255,0.08);
+            flex-shrink: 0;
+        }
+
+        /* Grid cell colors */
+        .arc-cell.c0 { background: var(--arc-0); }
+        .arc-cell.c1 { background: var(--arc-1); }
+        .arc-cell.c2 { background: var(--arc-2); }
+        .arc-cell.c3 { background: var(--arc-3); }
+        .arc-cell.c4 { background: var(--arc-4); }
+        .arc-cell.c5 { background: var(--arc-5); }
+        .arc-cell.c6 { background: var(--arc-6); }
+        .arc-cell.c7 { background: var(--arc-7); }
+        .arc-cell.c8 { background: var(--arc-8); }
+        .arc-cell.c9 { background: var(--arc-9); }
+
+        /* Smaller cells for large grids */
+        .arc-grid.small .arc-cell {
+            width: 16px;
+            height: 16px;
+        }
+        .arc-grid.tiny .arc-cell {
+            width: 10px;
+            height: 10px;
+        }
+
+        /* ---- Example pair ---- */
+        .example-pair {
+            display: flex;
+            align-items: flex-start;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+        .grid-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .grid-panel .grid-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .grid-panel .grid-meta {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .arrow {
+            display: flex;
+            align-items: center;
+            font-size: 28px;
+            color: var(--text-muted);
+            padding-top: 20px;
+        }
+
+        /* ---- Section headers ---- */
+        .section-header {
+            font-size: 16px;
+            font-weight: 700;
+            margin: 24px 0 12px 0;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-header .badge {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+
+        /* ---- Breadcrumb ---- */
+        .breadcrumb {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+        .breadcrumb a { color: var(--text-muted); }
+        .breadcrumb a:hover { color: var(--accent); }
+        .breadcrumb .sep { margin: 0 6px; }
+
+        /* ---- Color legend ---- */
+        .color-legend {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+        .color-swatch {
+            width: 18px;
+            height: 18px;
+            border-radius: 3px;
+            border: 1px solid rgba(255,255,255,0.15);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 0 0 2px rgba(0,0,0,0.8);
+        }
+
+        /* ---- Version section ---- */
+        .version-section {
+            margin-bottom: 32px;
+        }
+        .version-section h2 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+        .version-section .version-badge {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 10px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        /* ---- Responsive ---- */
+        @media (max-width: 768px) {
+            .container { padding: 12px; }
+            .example-pair { gap: 12px; }
+            .arc-cell { width: 16px; height: 16px; }
+
+            /* Nav becomes vertical with hamburger toggle */
+            nav {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 0;
+                gap: 0;
+            }
+            nav .nav-top {
+                display: flex;
+                align-items: center;
+                padding: 10px 14px;
+                gap: 12px;
+            }
+            nav .nav-toggle {
+                display: block;
+            }
+
+            /* Hide nav links by default on mobile */
+            nav .nav-links {
+                display: none;
+                flex-direction: column;
+                gap: 0;
+                border-top: 1px solid var(--border);
+                padding: 0 0 8px 0;
+            }
+            nav .nav-links.open {
+                display: flex;
+            }
+
+            /* Hide desktop-only separators and inline version labels */
+            nav .nav-links > .nav-sep {
+                display: none;
+            }
+            nav .nav-version-label {
+                display: none;
+            }
+
+            /* Nav groups stack vertically on mobile */
+            nav .nav-group {
+                display: flex;
+                flex-direction: column;
+            }
+
+            /* Show mobile group headers */
+            nav .nav-group-label {
+                display: block;
+                color: var(--text-muted);
+                font-size: 10px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.8px;
+                padding: 12px 16px 4px 16px;
+            }
+            /* Subtle divider between groups */
+            nav .nav-group + .nav-sep + .nav-group .nav-group-label,
+            nav .nav-links > .nav-group:not(:first-child) .nav-group-label {
+                border-top: 1px solid var(--border);
+                padding-top: 12px;
+                margin-top: 4px;
+            }
+
+            /* Full-width link items on mobile */
+            nav .nav-links a {
+                display: block;
+                padding: 10px 16px 10px 28px;
+                border-radius: 0;
+                font-size: 15px;
+                border-left: 3px solid transparent;
+            }
+            nav .nav-links a:hover {
+                background: var(--bg-hover);
+            }
+            nav .nav-links a.active {
+                color: var(--accent);
+                background: var(--bg);
+                border-left-color: var(--accent);
+            }
+
+            /* Sticky table header: auto-compute is hard, disable sticky on mobile */
+            table.data-table th {
+                position: static;
+            }
+
+            h1 { font-size: 20px; }
+            h1 .subtitle { font-size: 14px; }
+        }
+
+        /* ---- Page title ---- */
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        h1 .subtitle {
+            font-weight: 400;
+            color: var(--text-muted);
+            font-size: 16px;
+        }
+
+        /* ---- Footer ---- */
+        .site-footer {
+            margin-top: auto;
+            border-top: 1px solid var(--border);
+            padding: 20px 24px;
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        .site-footer a {
+            color: var(--text-muted);
+        }
+        .site-footer a:hover {
+            color: var(--accent);
+        }
+        .site-footer .sep {
+            margin: 0 8px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-top">
+            <a href="https://xprilion.com/arc-agi-data-explorer/" class="brand">ARC-AGI Explorer</a>
+            <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">&#9776;</button>
+        </div>
+        <div class="nav-links" id="nav-links">
+            <div class="nav-group">
+                <span class="nav-group-label">ARC-AGI 1</span>
+                <span class="nav-version-label">v1</span>
+                <a href="https://xprilion.com/arc-agi-data-explorer/v/1/dataset/training/" >Training</a>
+                <a href="https://xprilion.com/arc-agi-data-explorer/v/1/dataset/evaluation/" >Evaluation</a>
+            </div>
+            <span class="nav-sep">|</span>
+            <div class="nav-group">
+                <span class="nav-group-label">ARC-AGI 2</span>
+                <span class="nav-version-label">v2</span>
+                <a href="https://xprilion.com/arc-agi-data-explorer/v/2/dataset/training/" class="active">Training</a>
+                <a href="https://xprilion.com/arc-agi-data-explorer/v/2/dataset/evaluation/" >Evaluation</a>
+                <a href="https://xprilion.com/arc-agi-data-explorer/v/2/dataset/test/" >Test</a>
+            </div>
+            <span class="nav-sep">|</span>
+            <div class="nav-group">
+                <span class="nav-group-label">Tools</span>
+                <a href="https://xprilion.com/arc-agi-data-explorer/submissions/" >Submissions</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        
+<div class="breadcrumb">
+    <a href="https://xprilion.com/arc-agi-data-explorer/">Home</a><span class="sep">/</span>
+    ARC-AGI 2<span class="sep">/</span>
+    <a href="https://xprilion.com/arc-agi-data-explorer/v/2/dataset/training/">Training</a><span class="sep">/</span>
+    <span class="mono">af902bf9</span>
+</div>
+
+<h1>
+    <span class="mono">af902bf9</span>
+    <span class="subtitle">&mdash; ARC-AGI 2 / Training</span>
+</h1>
+
+<!-- Summary card -->
+<div class="card">
+    <div class="stats">
+        <div class="stat">
+            <div class="value">3</div>
+            <div class="label">Train Pairs</div>
+        </div>
+        <div class="stat">
+            <div class="value">1</div>
+            <div class="label">Test Cases</div>
+        </div>
+        <div class="stat">
+            <div class="value">10&times;10</div>
+            <div class="label">Max Grid</div>
+        </div>
+        <div class="stat">
+            <div class="value">10&times;10</div>
+            <div class="label">Min Grid</div>
+        </div>
+        <div class="stat">
+            <div class="value">3</div>
+            <div class="label">Colors Used</div>
+        </div>
+        <div class="stat">
+            <div class="value"><span style="color:var(--green)">Yes</span></div>
+            <div class="label">Has Solution</div>
+        </div>
+    </div>
+    <div style="margin-top: 12px;">
+        <span style="font-size: 12px; color: var(--text-muted); margin-right: 8px;">Colors:</span>
+        <div class="color-legend" style="display: inline-flex;">
+            
+            
+            <div class="color-swatch" style="background: var(--arc-0);" title="Black (0)">0</div>
+            
+            <div class="color-swatch" style="background: var(--arc-2);" title="Red (2)">2</div>
+            
+            <div class="color-swatch" style="background: var(--arc-4);" title="Yellow (4)">4</div>
+            
+        </div>
+    </div>
+</div>
+
+<!-- Macro: render a grid -->
+
+
+<!-- Training examples -->
+<div class="section-header">
+    Training Examples
+    <span class="badge">3 pairs</span>
+</div>
+
+
+<div class="card">
+    <div style="font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 12px;">
+        Example 1
+    </div>
+    <div class="example-pair">
+        <div class="grid-panel">
+            <div class="grid-label">Input</div>
+            
+
+
+
+<div class="arc-grid ">
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+</div>
+
+            <div class="grid-meta">10&times;10 &middot; 2 colors</div>
+        </div>
+        <div class="arrow">&rarr;</div>
+        <div class="grid-panel">
+            <div class="grid-label">Output</div>
+            
+
+
+
+<div class="arc-grid ">
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+</div>
+
+            <div class="grid-meta">10&times;10 &middot; 3 colors</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div style="font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 12px;">
+        Example 2
+    </div>
+    <div class="example-pair">
+        <div class="grid-panel">
+            <div class="grid-label">Input</div>
+            
+
+
+
+<div class="arc-grid ">
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+</div>
+
+            <div class="grid-meta">10&times;10 &middot; 2 colors</div>
+        </div>
+        <div class="arrow">&rarr;</div>
+        <div class="grid-panel">
+            <div class="grid-label">Output</div>
+            
+
+
+
+<div class="arc-grid ">
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+</div>
+
+            <div class="grid-meta">10&times;10 &middot; 3 colors</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div style="font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 12px;">
+        Example 3
+    </div>
+    <div class="example-pair">
+        <div class="grid-panel">
+            <div class="grid-label">Input</div>
+            
+
+
+
+<div class="arc-grid ">
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+    </div>
+    
+</div>
+
+            <div class="grid-meta">10&times;10 &middot; 2 colors</div>
+        </div>
+        <div class="arrow">&rarr;</div>
+        <div class="grid-panel">
+            <div class="grid-label">Output</div>
+            
+
+
+
+<div class="arc-grid ">
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+    </div>
+    
+</div>
+
+            <div class="grid-meta">10&times;10 &middot; 3 colors</div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Test examples -->
+<div class="section-header">
+    Test Cases
+    <span class="badge">1 cases</span>
+</div>
+
+
+<div class="card">
+    <div style="font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 12px;">
+        Test 1
+    </div>
+    <div class="example-pair">
+        <div class="grid-panel">
+            <div class="grid-label">Input</div>
+            
+
+
+
+<div class="arc-grid ">
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+</div>
+
+            <div class="grid-meta">10&times;10 &middot; 2 colors</div>
+        </div>
+
+        
+        <div class="arrow">&rarr;</div>
+        <div class="grid-panel">
+            <div class="grid-label" style="color: var(--green);">Solution</div>
+            
+
+
+
+<div class="arc-grid ">
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c2"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c4"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+    <div class="arc-grid-row">
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+        <div class="arc-cell c0"></div>
+        
+    </div>
+    
+</div>
+
+            <div class="grid-meta">10&times;10 &middot; 3 colors</div>
+        </div>
+        
+    </div>
+</div>
+
+
+<!-- Navigation -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);">
+    <div style="display: flex; gap: 8px;">
+        
+        <a href="https://xprilion.com/arc-agi-data-explorer/v/2/puzzle/training/af726779/" class="btn btn-secondary">&larr; Previous</a>
+        
+        <a href="https://xprilion.com/arc-agi-data-explorer/v/2/dataset/training/" class="btn btn-secondary">Back to Training</a>
+    </div>
+    <div>
+        
+        <a href="https://xprilion.com/arc-agi-data-explorer/v/2/puzzle/training/afe3afe9/" class="btn btn-secondary">Next &rarr;</a>
+        
+    </div>
+</div>
+
+
+    </div>
+
+    <footer class="site-footer">
+        Made with &#10084;&#65039; by xprilion
+        <span class="sep">&middot;</span>
+        <a href="https://x.com/xprilion" target="_blank" rel="noopener noreferrer">Twitter</a>
+        <span class="sep">&middot;</span>
+        <a href="https://github.com/xprilion" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </footer>
+
+    <script>window.BASE_URL = "https://xprilion.com/arc-agi-data-explorer";</script>
+    <script>
+    /* Mobile nav toggle */
+    (function() {
+        var btn = document.getElementById('nav-toggle');
+        var links = document.getElementById('nav-links');
+        if (btn && links) {
+            btn.addEventListener('click', function() {
+                var open = links.classList.toggle('open');
+                btn.setAttribute('aria-expanded', open);
+                btn.innerHTML = open ? '&#10005;' : '&#9776;';
+            });
+            /* Close menu when a link is clicked */
+            links.querySelectorAll('a').forEach(function(a) {
+                a.addEventListener('click', function() {
+                    links.classList.remove('open');
+                    btn.setAttribute('aria-expanded', 'false');
+                    btn.innerHTML = '&#9776;';
+                });
+            });
+        }
+    })();
+    </script>
+    <script src="https://xprilion.com/arc-agi-data-explorer/assets/app.js"></script>
+    
+</body>
+</html>

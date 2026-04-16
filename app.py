@@ -1,6 +1,8 @@
 """
 ARC-AGI Data Explorer — FastAPI + Jinja2 web application.
 
+Supports both ARC-AGI v1 (individual JSON files) and v2 (combined JSON files).
+
 Run with:
     PORT=8000 uvicorn app:app --reload --host 0.0.0.0 --port $PORT
 """
@@ -25,49 +27,125 @@ TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 # Load data once at startup
 # ---------------------------------------------------------------------------
 
-def _load_json(filename: str) -> dict:
-    filepath = DATA_DIR / filename
+
+def _load_json(filepath: Path) -> dict:
+    """Load a JSON file, returning {} if it doesn't exist."""
     if not filepath.exists():
         return {}
     with open(filepath, "r") as f:
         return json.load(f)
 
 
-# Challenges: dict[puzzle_id] -> {"train": [...], "test": [...]}
-TRAINING_CHALLENGES = _load_json("arc-agi_training_challenges.json")
-EVALUATION_CHALLENGES = _load_json("arc-agi_evaluation_challenges.json")
-TEST_CHALLENGES = _load_json("arc-agi_test_challenges.json")
+def _load_v1_data(split_dir: Path) -> tuple[dict, dict]:
+    """
+    Load ARC-AGI v1 data from a directory of individual puzzle JSON files.
 
-# Solutions: dict[puzzle_id] -> list[grid]
-TRAINING_SOLUTIONS = _load_json("arc-agi_training_solutions.json")
-EVALUATION_SOLUTIONS = _load_json("arc-agi_evaluation_solutions.json")
+    Each file: {puzzle_id}.json -> {"train": [...], "test": [{"input": ..., "output": ...}]}
 
-# Sample submission (for reference)
-SAMPLE_SUBMISSION = _load_json("sample_submission.json")
+    Returns:
+        (challenges, solutions) where:
+        - challenges: {puzzle_id: {"train": [...], "test": [{"input": ...}]}}
+        - solutions: {puzzle_id: [output_grid, ...]}
+    """
+    challenges = {}
+    solutions = {}
 
-DATASETS = {
-    "training": {
-        "label": "Training",
-        "challenges": TRAINING_CHALLENGES,
-        "solutions": TRAINING_SOLUTIONS,
-        "description": "1,000 puzzles with full solutions. The primary dataset for learning ARC-AGI patterns.",
+    if not split_dir.exists():
+        return challenges, solutions
+
+    for fp in sorted(split_dir.glob("*.json")):
+        puzzle_id = fp.stem
+        with open(fp, "r") as f:
+            data = json.load(f)
+
+        train = data.get("train", [])
+        test_raw = data.get("test", [])
+
+        # Separate test inputs from outputs (solutions)
+        test_inputs = []
+        sol_grids = []
+        for t in test_raw:
+            test_inputs.append({"input": t["input"]})
+            if "output" in t:
+                sol_grids.append(t["output"])
+
+        challenges[puzzle_id] = {"train": train, "test": test_inputs}
+        if sol_grids:
+            solutions[puzzle_id] = sol_grids
+
+    return challenges, solutions
+
+
+def _load_v2_json(filename: str) -> dict:
+    """Load a JSON file from data/2/."""
+    return _load_json(DATA_DIR / "2" / filename)
+
+
+# ---- ARC-AGI v1 data (individual JSON files) ----
+V1_TRAINING_CHALLENGES, V1_TRAINING_SOLUTIONS = _load_v1_data(DATA_DIR / "1" / "training")
+V1_EVALUATION_CHALLENGES, V1_EVALUATION_SOLUTIONS = _load_v1_data(DATA_DIR / "1" / "evaluation")
+
+# ---- ARC-AGI v2 data (combined JSON files) ----
+V2_TRAINING_CHALLENGES = _load_v2_json("arc-agi_training_challenges.json")
+V2_EVALUATION_CHALLENGES = _load_v2_json("arc-agi_evaluation_challenges.json")
+V2_TEST_CHALLENGES = _load_v2_json("arc-agi_test_challenges.json")
+V2_TRAINING_SOLUTIONS = _load_v2_json("arc-agi_training_solutions.json")
+V2_EVALUATION_SOLUTIONS = _load_v2_json("arc-agi_evaluation_solutions.json")
+V2_SAMPLE_SUBMISSION = _load_v2_json("sample_submission.json")
+
+# ---------------------------------------------------------------------------
+# Unified data structure: VERSIONS[version][dataset_name] -> {...}
+# ---------------------------------------------------------------------------
+
+VERSIONS = {
+    "1": {
+        "label": "ARC-AGI 1",
+        "datasets": {
+            "training": {
+                "label": "Training",
+                "challenges": V1_TRAINING_CHALLENGES,
+                "solutions": V1_TRAINING_SOLUTIONS,
+                "description": f"{len(V1_TRAINING_CHALLENGES)} puzzles with full solutions. The original ARC-AGI training set.",
+            },
+            "evaluation": {
+                "label": "Evaluation",
+                "challenges": V1_EVALUATION_CHALLENGES,
+                "solutions": V1_EVALUATION_SOLUTIONS,
+                "description": f"{len(V1_EVALUATION_CHALLENGES)} puzzles with full solutions. The original ARC-AGI evaluation set.",
+            },
+        },
     },
-    "evaluation": {
-        "label": "Evaluation",
-        "challenges": EVALUATION_CHALLENGES,
-        "solutions": EVALUATION_SOLUTIONS,
-        "description": "120 held-out puzzles with solutions. Used for local evaluation.",
-    },
-    "test": {
-        "label": "Test",
-        "challenges": TEST_CHALLENGES,
-        "solutions": TRAINING_SOLUTIONS,  # test puzzles are a subset of training
-        "description": "240 puzzles (subset of training) to submit predictions for. Solutions sourced from training.",
+    "2": {
+        "label": "ARC-AGI 2",
+        "datasets": {
+            "training": {
+                "label": "Training",
+                "challenges": V2_TRAINING_CHALLENGES,
+                "solutions": V2_TRAINING_SOLUTIONS,
+                "description": f"{len(V2_TRAINING_CHALLENGES)} puzzles with full solutions. The primary dataset for learning ARC-AGI patterns.",
+            },
+            "evaluation": {
+                "label": "Evaluation",
+                "challenges": V2_EVALUATION_CHALLENGES,
+                "solutions": V2_EVALUATION_SOLUTIONS,
+                "description": f"{len(V2_EVALUATION_CHALLENGES)} held-out puzzles with solutions. Used for local evaluation.",
+            },
+            "test": {
+                "label": "Test",
+                "challenges": V2_TEST_CHALLENGES,
+                "solutions": V2_TRAINING_SOLUTIONS,  # test puzzles are a subset of training
+                "description": f"{len(V2_TEST_CHALLENGES)} puzzles (subset of training) to submit predictions for.",
+            },
+        },
     },
 }
 
 # Pre-sorted puzzle ID lists for next/previous navigation
-SORTED_IDS = {name: sorted(ds["challenges"].keys()) for name, ds in DATASETS.items()}
+SORTED_IDS = {}
+for ver_key, ver in VERSIONS.items():
+    SORTED_IDS[ver_key] = {}
+    for ds_key, ds in ver["datasets"].items():
+        SORTED_IDS[ver_key][ds_key] = sorted(ds["challenges"].keys())
 
 # In-memory store for uploaded submissions (reset on server restart)
 CURRENT_SUBMISSION: dict = {}
@@ -76,6 +154,15 @@ CURRENT_SUBMISSION_NAME: str = ""
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def get_dataset(version: str, dataset_name: str) -> Optional[dict]:
+    """Get a dataset dict from VERSIONS, or None if not found."""
+    ver = VERSIONS.get(version)
+    if not ver:
+        return None
+    return ver["datasets"].get(dataset_name)
+
 
 def grid_dims(grid: list[list[int]]) -> tuple[int, int]:
     """Return (rows, cols) for a 2D grid."""
@@ -146,31 +233,39 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 # --- Home page ---
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    dataset_stats = []
-    for key, ds in DATASETS.items():
-        challenges = ds["challenges"]
-        solutions = ds["solutions"]
-        total_train = sum(len(c.get("train", [])) for c in challenges.values())
-        total_test = sum(len(c.get("test", [])) for c in challenges.values())
-        total_solved = sum(1 for pid in challenges if pid in solutions and solutions[pid])
-        dataset_stats.append({
-            "key": key,
-            "label": ds["label"],
-            "description": ds["description"],
-            "num_puzzles": len(challenges),
-            "total_train_examples": total_train,
-            "total_test_examples": total_test,
-            "num_with_solutions": total_solved,
+    versions_data = []
+    for ver_key, ver in VERSIONS.items():
+        ver_datasets = []
+        for ds_key, ds in ver["datasets"].items():
+            challenges = ds["challenges"]
+            solutions = ds["solutions"]
+            total_train = sum(len(c.get("train", [])) for c in challenges.values())
+            total_test = sum(len(c.get("test", [])) for c in challenges.values())
+            total_solved = sum(1 for pid in challenges if pid in solutions and solutions[pid])
+            ver_datasets.append({
+                "key": ds_key,
+                "label": ds["label"],
+                "description": ds["description"],
+                "num_puzzles": len(challenges),
+                "total_train_examples": total_train,
+                "total_test_examples": total_test,
+                "num_with_solutions": total_solved,
+            })
+        versions_data.append({
+            "key": ver_key,
+            "label": ver["label"],
+            "datasets": ver_datasets,
         })
     return templates.TemplateResponse(request, "index.html", {
-        "datasets": dataset_stats,
+        "versions": versions_data,
     })
 
 
 # --- Dataset listing ---
-@app.get("/dataset/{dataset_name}", response_class=HTMLResponse)
+@app.get("/v/{version}/dataset/{dataset_name}", response_class=HTMLResponse)
 async def dataset_view(
     request: Request,
+    version: str,
     dataset_name: str,
     q: Optional[str] = Query(None, description="Search puzzle ID"),
     min_size: Optional[int] = Query(None, description="Min grid dimension"),
@@ -180,10 +275,11 @@ async def dataset_view(
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=10, le=200),
 ):
-    ds = DATASETS.get(dataset_name)
+    ds = get_dataset(version, dataset_name)
     if not ds:
         return HTMLResponse("<h1>Dataset not found</h1>", status_code=404)
 
+    ver = VERSIONS[version]
     challenges = ds["challenges"]
     solutions = ds["solutions"]
 
@@ -223,6 +319,8 @@ async def dataset_view(
     page_summaries = summaries[start : start + per_page]
 
     return templates.TemplateResponse(request, "dataset.html", {
+        "version": version,
+        "version_label": ver["label"],
         "dataset_name": dataset_name,
         "dataset_label": ds["label"],
         "dataset_description": ds["description"],
@@ -240,12 +338,13 @@ async def dataset_view(
 
 
 # --- Individual puzzle view ---
-@app.get("/puzzle/{dataset_name}/{puzzle_id}", response_class=HTMLResponse)
-async def puzzle_view(request: Request, dataset_name: str, puzzle_id: str):
-    ds = DATASETS.get(dataset_name)
+@app.get("/v/{version}/puzzle/{dataset_name}/{puzzle_id}", response_class=HTMLResponse)
+async def puzzle_view(request: Request, version: str, dataset_name: str, puzzle_id: str):
+    ds = get_dataset(version, dataset_name)
     if not ds:
         return HTMLResponse("<h1>Dataset not found</h1>", status_code=404)
 
+    ver = VERSIONS[version]
     challenges = ds["challenges"]
     solutions = ds["solutions"]
 
@@ -292,7 +391,7 @@ async def puzzle_view(request: Request, dataset_name: str, puzzle_id: str):
     summary = puzzle_summary(puzzle_id, challenge, solutions)
 
     # Next / Previous puzzle navigation
-    ids = SORTED_IDS.get(dataset_name, [])
+    ids = SORTED_IDS.get(version, {}).get(dataset_name, [])
     prev_id = None
     next_id = None
     if ids:
@@ -306,6 +405,8 @@ async def puzzle_view(request: Request, dataset_name: str, puzzle_id: str):
             pass
 
     return templates.TemplateResponse(request, "puzzle.html", {
+        "version": version,
+        "version_label": ver["label"],
         "dataset_name": dataset_name,
         "dataset_label": ds["label"],
         "puzzle_id": puzzle_id,
@@ -356,15 +457,15 @@ def _diff_grids(submitted: list, expected: list) -> list:
     return diff
 
 
-def evaluate_submission(submission: dict, dataset_name: str) -> dict:
+def evaluate_submission(submission: dict, version: str, dataset_name: str) -> dict:
     """
     Compare a submission dict against the ground-truth solutions for a dataset.
     Returns evaluation results compatible with the Kaggle scoring metric:
     - For each puzzle, score 1 if *either* attempt exactly matches the solution.
     """
-    ds = DATASETS.get(dataset_name)
+    ds = get_dataset(version, dataset_name)
     if not ds:
-        return {"error": f"Unknown dataset: {dataset_name}"}
+        return {"error": f"Unknown dataset: v{version}/{dataset_name}"}
 
     challenges = ds["challenges"]
     solutions = ds["solutions"]
@@ -442,7 +543,23 @@ def evaluate_submission(submission: dict, dataset_name: str) -> dict:
 @app.get("/submissions", response_class=HTMLResponse)
 async def submissions_home(request: Request):
     """Show submission upload form and results summary."""
+    # Build version/dataset options for the form
+    version_options = []
+    for ver_key, ver in VERSIONS.items():
+        ds_list = []
+        for ds_key, ds in ver["datasets"].items():
+            ds_list.append({
+                "key": ds_key,
+                "label": ds["label"],
+                "num_puzzles": len(ds["challenges"]),
+            })
+        version_options.append({
+            "key": ver_key,
+            "label": ver["label"],
+            "datasets": ds_list,
+        })
     return templates.TemplateResponse(request, "submissions.html", {
+        "version_options": version_options,
         "submission_name": CURRENT_SUBMISSION_NAME,
         "has_submission": bool(CURRENT_SUBMISSION),
         "evaluation": None,
@@ -452,15 +569,37 @@ async def submissions_home(request: Request):
 
 
 @app.post("/submissions/upload", response_class=HTMLResponse)
-async def submissions_upload(request: Request, file: UploadFile = File(...), dataset: str = Form("evaluation")):
+async def submissions_upload(
+    request: Request,
+    file: UploadFile = File(...),
+    version: str = Form("2"),
+    dataset: str = Form("evaluation"),
+):
     """Upload a submission JSON and evaluate it."""
     global CURRENT_SUBMISSION, CURRENT_SUBMISSION_NAME
+
+    # Build version options for re-rendering the template
+    version_options = []
+    for ver_key, ver in VERSIONS.items():
+        ds_list = []
+        for ds_key, ds in ver["datasets"].items():
+            ds_list.append({
+                "key": ds_key,
+                "label": ds["label"],
+                "num_puzzles": len(ds["challenges"]),
+            })
+        version_options.append({
+            "key": ver_key,
+            "label": ver["label"],
+            "datasets": ds_list,
+        })
 
     content = await file.read()
     try:
         submission = json.loads(content)
     except json.JSONDecodeError:
         return templates.TemplateResponse(request, "submissions.html", {
+            "version_options": version_options,
             "submission_name": "",
             "has_submission": False,
             "evaluation": None,
@@ -472,25 +611,27 @@ async def submissions_upload(request: Request, file: UploadFile = File(...), dat
     CURRENT_SUBMISSION = submission
     CURRENT_SUBMISSION_NAME = file.filename or "submission.json"
 
-    evaluation = evaluate_submission(submission, dataset)
+    evaluation = evaluate_submission(submission, version, dataset)
 
     return templates.TemplateResponse(request, "submissions.html", {
+        "version_options": version_options,
         "submission_name": CURRENT_SUBMISSION_NAME,
         "has_submission": True,
         "evaluation": evaluation,
+        "version": version,
         "dataset_name": dataset,
         "detail": None,
         "puzzle_index": None,
     })
 
 
-@app.get("/submissions/detail/{dataset_name}/{puzzle_index}", response_class=HTMLResponse)
-async def submissions_detail(request: Request, dataset_name: str, puzzle_index: int):
+@app.get("/submissions/detail/{version}/{dataset_name}/{puzzle_index}", response_class=HTMLResponse)
+async def submissions_detail(request: Request, version: str, dataset_name: str, puzzle_index: int):
     """Show detailed diff for a single puzzle in the current submission."""
     if not CURRENT_SUBMISSION:
         return RedirectResponse("/submissions")
 
-    evaluation = evaluate_submission(CURRENT_SUBMISSION, dataset_name)
+    evaluation = evaluate_submission(CURRENT_SUBMISSION, version, dataset_name)
     if "error" in evaluation:
         return RedirectResponse("/submissions")
 
@@ -501,19 +642,37 @@ async def submissions_detail(request: Request, dataset_name: str, puzzle_index: 
     detail = results[puzzle_index]
 
     # Get the challenge data for rendering input grids
-    ds = DATASETS.get(dataset_name, {})
-    challenges = ds.get("challenges", {})
+    ds = get_dataset(version, dataset_name)
+    challenges = ds.get("challenges", {}) if ds else {}
     challenge = challenges.get(detail["puzzle_id"], {})
     test_inputs = [t.get("input", []) for t in challenge.get("test", [])]
+
+    # Build version options
+    version_options = []
+    for ver_key, ver in VERSIONS.items():
+        ds_list = []
+        for ds_key, ds_data in ver["datasets"].items():
+            ds_list.append({
+                "key": ds_key,
+                "label": ds_data["label"],
+                "num_puzzles": len(ds_data["challenges"]),
+            })
+        version_options.append({
+            "key": ver_key,
+            "label": ver["label"],
+            "datasets": ds_list,
+        })
 
     # Next/previous navigation within submission results
     prev_index = puzzle_index - 1 if puzzle_index > 0 else None
     next_index = puzzle_index + 1 if puzzle_index < len(results) - 1 else None
 
     return templates.TemplateResponse(request, "submissions.html", {
+        "version_options": version_options,
         "submission_name": CURRENT_SUBMISSION_NAME,
         "has_submission": True,
         "evaluation": evaluation,
+        "version": version,
         "dataset_name": dataset_name,
         "detail": detail,
         "puzzle_index": puzzle_index,
@@ -521,6 +680,69 @@ async def submissions_detail(request: Request, dataset_name: str, puzzle_index: 
         "prev_index": prev_index,
         "next_index": next_index,
     })
+
+
+# ---------------------------------------------------------------------------
+# API endpoints for client-side data (puzzle index, solutions)
+# ---------------------------------------------------------------------------
+
+from fastapi.responses import JSONResponse
+
+
+@app.get("/data/puzzle-index.json")
+async def puzzle_index_json():
+    """Serve the puzzle index JSON for client-side filtering."""
+    index = {}
+    for ver_key, ver in VERSIONS.items():
+        for ds_key, ds in ver["datasets"].items():
+            challenges = ds["challenges"]
+            solutions = ds["solutions"]
+            summaries = []
+            for pid, challenge in challenges.items():
+                s = puzzle_summary(pid, challenge, solutions)
+                summaries.append(s)
+            index_key = f"{ver_key}/{ds_key}"
+            index[index_key] = {
+                "label": ds["label"],
+                "version_label": ver["label"],
+                "description": ds["description"],
+                "puzzles": summaries,
+            }
+    return JSONResponse(content=index)
+
+
+@app.get("/data/{version}/{filename}")
+async def serve_data_file(version: str, filename: str):
+    """
+    Serve data files for client-side submission evaluation.
+    For v2: serve files directly from data/2/.
+    For v1: generate combined JSON on the fly from loaded data.
+    """
+    if version == "2":
+        filepath = DATA_DIR / "2" / filename
+        if filepath.exists() and filepath.suffix == ".json":
+            return JSONResponse(content=_load_json(filepath))
+        return JSONResponse(content={"error": "File not found"}, status_code=404)
+    elif version == "1":
+        # Serve generated combined JSON files for v1
+        v1_file_map = {
+            "v1_training_challenges.json": V1_TRAINING_CHALLENGES,
+            "v1_training_solutions.json": V1_TRAINING_SOLUTIONS,
+            "v1_evaluation_challenges.json": V1_EVALUATION_CHALLENGES,
+            "v1_evaluation_solutions.json": V1_EVALUATION_SOLUTIONS,
+        }
+        data = v1_file_map.get(filename)
+        if data is not None:
+            return JSONResponse(content=data)
+        return JSONResponse(content={"error": "File not found"}, status_code=404)
+    return JSONResponse(content={"error": "Unknown version"}, status_code=404)
+
+
+# ---------------------------------------------------------------------------
+# Static file serving (for assets)
+# ---------------------------------------------------------------------------
+from fastapi.staticfiles import StaticFiles
+app.mount("/assets", StaticFiles(directory=str(BASE_DIR / "assets")), name="assets")
 
 
 # ---------------------------------------------------------------------------

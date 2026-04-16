@@ -2,8 +2,8 @@
  * ARC-AGI Explorer - Client-side JavaScript
  * 
  * Handles:
- * - Dataset filtering and pagination
- * - Submission evaluation
+ * - Dataset filtering and pagination (versioned)
+ * - Submission evaluation (versioned)
  * - Grid rendering
  */
 
@@ -193,6 +193,7 @@ function renderDiffGrid(diff) {
 
 let puzzleIndex = null;
 let currentDataset = null;
+let currentVersion = null;
 let currentFilters = { q: '', minSize: null, maxSize: null, minExamples: null, sort: 'id' };
 let currentPage = 1;
 const perPage = 50;
@@ -256,7 +257,7 @@ function filterPuzzles(puzzles) {
 /**
  * Render the puzzle table for dataset pages.
  */
-function renderPuzzleTable(puzzles, datasetName) {
+function renderPuzzleTable(puzzles, version, datasetName) {
     const totalPages = Math.max(1, Math.ceil(puzzles.length / perPage));
     currentPage = Math.min(currentPage, totalPages);
     const start = (currentPage - 1) * perPage;
@@ -282,7 +283,7 @@ function renderPuzzleTable(puzzles, datasetName) {
         tbody.innerHTML = pagePuzzles.map(p => `
             <tr>
                 <td>
-                    <a href="${BASE_URL}/puzzle/${datasetName}/${p.id}/" class="mono">${p.id}</a>
+                    <a href="${BASE_URL}/v/${version}/puzzle/${datasetName}/${p.id}/" class="mono">${p.id}</a>
                 </td>
                 <td>${p.num_train}</td>
                 <td>${p.num_test}</td>
@@ -302,13 +303,13 @@ function renderPuzzleTable(puzzles, datasetName) {
     }
     
     // Render pagination
-    renderPagination(puzzles.length, totalPages, datasetName);
+    renderPagination(puzzles.length, totalPages, version, datasetName);
 }
 
 /**
  * Render pagination controls.
  */
-function renderPagination(total, totalPages, datasetName) {
+function renderPagination(total, totalPages, version, datasetName) {
     const container = document.getElementById('pagination');
     if (!container) return;
     
@@ -346,13 +347,15 @@ function goToPage(page) {
  * Apply current filters and re-render the table.
  */
 function applyFilters() {
-    if (!puzzleIndex || !currentDataset) return;
+    if (!puzzleIndex || !currentVersion || !currentDataset) return;
     
-    const data = puzzleIndex[currentDataset];
+    // The puzzle index is keyed by "version/dataset"
+    const indexKey = `${currentVersion}/${currentDataset}`;
+    const data = puzzleIndex[indexKey];
     if (!data) return;
     
     const filtered = filterPuzzles(data.puzzles);
-    renderPuzzleTable(filtered, currentDataset);
+    renderPuzzleTable(filtered, currentVersion, currentDataset);
     
     // Update sort link active states
     document.querySelectorAll('[data-sort]').forEach(el => {
@@ -363,7 +366,8 @@ function applyFilters() {
 /**
  * Initialize dataset page filtering.
  */
-async function initDatasetPage(datasetName) {
+async function initDatasetPage(version, datasetName) {
+    currentVersion = version;
     currentDataset = datasetName;
     
     // Load index
@@ -435,27 +439,58 @@ let solutionsData = {};
 let challengesData = {};
 let currentEvaluation = null;
 let currentSubmissionName = '';
+let currentSubmissionVersion = '';
+let currentSubmissionDataset = '';
 
 /**
- * Load solutions for a specific dataset.
+ * Load solutions for a specific version and dataset.
  */
-async function loadSolutions(datasetName) {
-    const solutionFiles = {
-        'training': 'arc-agi_training_solutions.json',
-        'evaluation': 'arc-agi_evaluation_solutions.json',
-        'test': 'arc-agi_training_solutions.json', // test uses training solutions
+async function loadSolutions(version, datasetName) {
+    // Version-specific file mappings
+    const fileMap = {
+        '1': {
+            solutions: {
+                'training': 'v1_training_solutions.json',
+                'evaluation': 'v1_evaluation_solutions.json',
+            },
+            challenges: {
+                'training': 'v1_training_challenges.json',
+                'evaluation': 'v1_evaluation_challenges.json',
+            },
+        },
+        '2': {
+            solutions: {
+                'training': 'arc-agi_training_solutions.json',
+                'evaluation': 'arc-agi_evaluation_solutions.json',
+                'test': 'arc-agi_training_solutions.json', // test uses training solutions
+            },
+            challenges: {
+                'training': 'arc-agi_training_challenges.json',
+                'evaluation': 'arc-agi_evaluation_challenges.json',
+                'test': 'arc-agi_test_challenges.json',
+            },
+        },
     };
     
-    const challengeFiles = {
-        'training': 'arc-agi_training_challenges.json',
-        'evaluation': 'arc-agi_evaluation_challenges.json',
-        'test': 'arc-agi_test_challenges.json',
-    };
+    const versionFiles = fileMap[version];
+    if (!versionFiles) {
+        console.error(`Unknown version: ${version}`);
+        return false;
+    }
+    
+    const solFile = versionFiles.solutions[datasetName];
+    const chalFile = versionFiles.challenges[datasetName];
+    
+    if (!solFile || !chalFile) {
+        console.error(`Unknown dataset for version ${version}: ${datasetName}`);
+        return false;
+    }
     
     try {
+        const dataPrefix = `${BASE_URL}/data/${version}`;
         const [solResponse, chalResponse] = await Promise.all([
-            fetch(`${BASE_URL}/data/${solutionFiles[datasetName]}`),
-            fetch(`${BASE_URL}/data/${challengeFiles[datasetName]}`),
+            fetch(`${dataPrefix}/${solFile}`),
+            fetch(`${dataPrefix}/${chalFile}`),
         ]);
         
         solutionsData = await solResponse.json();
@@ -471,7 +506,7 @@ async function loadSolutions(datasetName) {
 /**
  * Handle file upload and evaluation.
  */
-async function handleSubmissionUpload(file, datasetName) {
+async function handleSubmissionUpload(file, version, datasetName) {
     // Show loading state
     const resultsContainer = document.getElementById('evaluation-results');
     if (resultsContainer) {
@@ -479,7 +514,7 @@ async function handleSubmissionUpload(file, datasetName) {
     }
     
     // Load solutions
-    const loaded = await loadSolutions(datasetName);
+    const loaded = await loadSolutions(version, datasetName);
     if (!loaded) {
         if (resultsContainer) {
             resultsContainer.innerHTML = '<p style="color: var(--arc-2);">Failed to load solution data.</p>';
@@ -492,17 +527,20 @@ async function handleSubmissionUpload(file, datasetName) {
         const text = await file.text();
         const submission = JSON.parse(text);
         currentSubmissionName = file.name;
+        currentSubmissionVersion = version;
+        currentSubmissionDataset = datasetName;
         
         // Evaluate
         currentEvaluation = evaluateSubmission(submission, solutionsData, challengesData);
         
         // Render results
-        renderEvaluationResults(currentEvaluation, datasetName);
+        renderEvaluationResults(currentEvaluation, version, datasetName);
         
         // Update current file display
         const fileDisplay = document.getElementById('current-file');
         if (fileDisplay) {
-            fileDisplay.innerHTML = `Current file: <strong style="color: var(--text);">${currentSubmissionName}</strong>`;
+            const versionLabel = version === '1' ? 'ARC-AGI 1' : 'ARC-AGI 2';
+            fileDisplay.innerHTML = `Current file: <strong style="color: var(--text);">${currentSubmissionName}</strong> (evaluated against ${versionLabel} / ${datasetName})`;
         }
         
     } catch (error) {
@@ -516,7 +554,7 @@ async function handleSubmissionUpload(file, datasetName) {
 /**
  * Render evaluation results summary and table.
  */
-function renderEvaluationResults(evaluation, datasetName) {
+function renderEvaluationResults(evaluation, version, datasetName) {
     const container = document.getElementById('evaluation-results');
     if (!container) return;
     
@@ -580,7 +618,7 @@ function renderEvaluationResults(evaluation, datasetName) {
                                 }
                             </td>
                             <td>
-                                <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;" onclick="showPuzzleDetail(${idx}, '${datasetName}')">View Diff</button>
+                                <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;" onclick="showPuzzleDetail(${idx}, '${version}', '${datasetName}')">View Diff</button>
                             </td>
                         </tr>
                     `).join('')}
@@ -595,7 +633,7 @@ function renderEvaluationResults(evaluation, datasetName) {
 /**
  * Show detailed diff view for a puzzle.
  */
-function showPuzzleDetail(puzzleIndex, datasetName) {
+function showPuzzleDetail(puzzleIndex, version, datasetName) {
     if (!currentEvaluation) return;
     
     const detail = currentEvaluation.results[puzzleIndex];
@@ -614,7 +652,7 @@ function showPuzzleDetail(puzzleIndex, datasetName) {
     
     let html = `
         <div class="breadcrumb">
-            <a href="#" onclick="backToResults('${datasetName}'); return false;">Results</a>
+            <a href="#" onclick="backToResults('${version}', '${datasetName}'); return false;">Results</a>
             <span class="sep">/</span><span class="mono">${detail.puzzleId}</span>
         </div>
         
@@ -724,14 +762,14 @@ function showPuzzleDetail(puzzleIndex, datasetName) {
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);">
             <div style="display: flex; gap: 8px;">
                 ${prevIndex !== null 
-                    ? `<button class="btn btn-secondary" onclick="showPuzzleDetail(${prevIndex}, '${datasetName}')">&larr; Previous</button>`
+                    ? `<button class="btn btn-secondary" onclick="showPuzzleDetail(${prevIndex}, '${version}', '${datasetName}')">&larr; Previous</button>`
                     : '<span class="btn btn-secondary" style="opacity: 0.4; cursor: default;">&larr; Previous</span>'
                 }
-                <button class="btn btn-secondary" onclick="backToResults('${datasetName}')">Back to Results</button>
+                <button class="btn btn-secondary" onclick="backToResults('${version}', '${datasetName}')">Back to Results</button>
             </div>
             <div>
                 ${nextIndex !== null 
-                    ? `<button class="btn btn-secondary" onclick="showPuzzleDetail(${nextIndex}, '${datasetName}')">Next &rarr;</button>`
+                    ? `<button class="btn btn-secondary" onclick="showPuzzleDetail(${nextIndex}, '${version}', '${datasetName}')">Next &rarr;</button>`
                     : '<span class="btn btn-secondary" style="opacity: 0.4; cursor: default;">Next &rarr;</span>'
                 }
             </div>
@@ -747,9 +785,28 @@ function showPuzzleDetail(puzzleIndex, datasetName) {
 /**
  * Go back to evaluation results summary.
  */
-function backToResults(datasetName) {
+function backToResults(version, datasetName) {
     if (currentEvaluation) {
-        renderEvaluationResults(currentEvaluation, datasetName);
+        renderEvaluationResults(currentEvaluation, version, datasetName);
+    }
+}
+
+/**
+ * Update the dataset selector based on the selected version.
+ */
+function updateDatasetOptions(versionSelect, datasetSelect) {
+    const version = versionSelect.value;
+    const options = window.VERSION_OPTIONS || [];
+    
+    const versionData = options.find(v => v.key === version);
+    if (!versionData) return;
+    
+    datasetSelect.innerHTML = '';
+    for (const ds of versionData.datasets) {
+        const option = document.createElement('option');
+        option.value = ds.key;
+        option.textContent = `${ds.label} (${ds.num_puzzles} puzzles)`;
+        datasetSelect.appendChild(option);
     }
 }
 
@@ -760,11 +817,23 @@ function initSubmissionsPage() {
     const form = document.getElementById('upload-form');
     if (!form) return;
     
+    const versionSelect = document.getElementById('version');
+    const datasetSelect = document.getElementById('dataset');
+    
+    // Populate dataset options based on default version
+    if (versionSelect && datasetSelect) {
+        updateDatasetOptions(versionSelect, datasetSelect);
+        
+        // Update datasets when version changes
+        versionSelect.addEventListener('change', () => {
+            updateDatasetOptions(versionSelect, datasetSelect);
+        });
+    }
+    
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         
         const fileInput = document.getElementById('file');
-        const datasetSelect = document.getElementById('dataset');
         
         if (!fileInput?.files?.[0]) {
             alert('Please select a file to upload.');
@@ -772,9 +841,10 @@ function initSubmissionsPage() {
         }
         
         const file = fileInput.files[0];
+        const version = versionSelect?.value || '2';
         const datasetName = datasetSelect?.value || 'evaluation';
         
-        await handleSubmissionUpload(file, datasetName);
+        await handleSubmissionUpload(file, version, datasetName);
     });
 }
 
@@ -793,8 +863,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const datasetContainer = document.getElementById('dataset-page');
     if (datasetContainer) {
         const datasetName = datasetContainer.dataset.name;
-        if (datasetName) {
-            initDatasetPage(datasetName);
+        const version = datasetContainer.dataset.version;
+        if (datasetName && version) {
+            initDatasetPage(version, datasetName);
         }
     }
     

@@ -5,47 +5,53 @@
 {% block content %}
 <h1>ARC-AGI Data Explorer</h1>
 <p style="color: var(--text-muted); margin-bottom: 24px;">
-    Browse, search, and visualize all puzzles from the ARC-AGI-2 dataset.
+    Browse, search, and visualize all puzzles from the ARC-AGI datasets.
     Each puzzle contains training demonstrations (input &rarr; output) and test cases to solve.
 </p>
 
-<div style="display: grid; gap: 16px;">
-{% for ds in datasets %}
-    <a href="{{ base_url }}/dataset/{{ ds.key }}/" style="text-decoration: none; color: inherit;">
-        <div class="card" style="transition: border-color 0.15s; cursor: pointer;" 
-             onmouseover="this.style.borderColor='var(--accent)'" 
-             onmouseout="this.style.borderColor='var(--border)'">
-            <h2>{{ ds.label }} Dataset</h2>
-            <p>{{ ds.description }}</p>
-            <div class="stats">
-                <div class="stat">
-                    <div class="value">{{ ds.num_puzzles }}</div>
-                    <div class="label">Puzzles</div>
-                </div>
-                <div class="stat">
-                    <div class="value">{{ ds.total_train_examples }}</div>
-                    <div class="label">Train Examples</div>
-                </div>
-                <div class="stat">
-                    <div class="value">{{ ds.total_test_examples }}</div>
-                    <div class="label">Test Examples</div>
-                </div>
-                <div class="stat">
-                    <div class="value">{{ ds.num_with_solutions }}</div>
-                    <div class="label">With Solutions</div>
+{% for ver in versions %}
+<div class="version-section">
+    <h2>{{ ver.label }} <span class="version-badge">{{ ver.datasets | length }} splits</span></h2>
+
+    <div style="display: grid; gap: 16px;">
+    {% for ds in ver.datasets %}
+        <a href="{{ base_url }}/v/{{ ver.key }}/dataset/{{ ds.key }}/" style="text-decoration: none; color: inherit;">
+            <div class="card" style="transition: border-color 0.15s; cursor: pointer;"
+                 onmouseover="this.style.borderColor='var(--accent)'"
+                 onmouseout="this.style.borderColor='var(--border)'">
+                <h2>{{ ds.label }} Dataset</h2>
+                <p>{{ ds.description }}</p>
+                <div class="stats">
+                    <div class="stat">
+                        <div class="value">{{ ds.num_puzzles }}</div>
+                        <div class="label">Puzzles</div>
+                    </div>
+                    <div class="stat">
+                        <div class="value">{{ ds.total_train_examples }}</div>
+                        <div class="label">Train Examples</div>
+                    </div>
+                    <div class="stat">
+                        <div class="value">{{ ds.total_test_examples }}</div>
+                        <div class="label">Test Examples</div>
+                    </div>
+                    <div class="stat">
+                        <div class="value">{{ ds.num_with_solutions }}</div>
+                        <div class="label">With Solutions</div>
+                    </div>
                 </div>
             </div>
-        </div>
-    </a>
-{% endfor %}
+        </a>
+    {% endfor %}
+    </div>
 </div>
+{% endfor %}
 
 <a href="{{ base_url }}/submissions/" style="text-decoration: none; color: inherit;">
     <div class="card" style="margin-top: 16px; transition: border-color 0.15s; cursor: pointer;"
          onmouseover="this.style.borderColor='var(--accent)'"
          onmouseout="this.style.borderColor='var(--border)'">
         <h2>Submission Evaluator</h2>
-        <p>Upload a submission JSON file and compare your predictions against the ground-truth solutions. View per-puzzle diffs, see which attempts match, and get an overall score using the Kaggle metric.</p>
+        <p>Upload a submission JSON file and compare your predictions against the ground-truth solutions. Supports both ARC-AGI 1 and 2 datasets. View per-puzzle diffs, see which attempts match, and get an overall score using the Kaggle metric.</p>
     </div>
 </a>
 

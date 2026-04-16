@@ -15,6 +15,7 @@
 <p style="color: var(--text-muted); margin-bottom: 20px;">
     Upload a submission JSON file to compare against ground-truth solutions.
     Scoring uses the Kaggle metric: a test case scores 1 if <em>either</em> attempt exactly matches the solution.
+    Supports both ARC-AGI 1 and ARC-AGI 2 datasets.
 </p>
 
 <!-- Upload form -->
@@ -23,11 +24,22 @@
     <form id="upload-form">
         <div class="filters">
             <div class="filter-group">
+                <label for="version">ARC-AGI Version</label>
+                <select id="version" name="version" style="background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; font-size: 13px;">
+                    {% if version_options is defined %}
+                    {% for ver in version_options %}
+                        <option value="{{ ver.key }}">{{ ver.label }}</option>
+                    {% endfor %}
+                    {% else %}
+                        <option value="1">ARC-AGI 1</option>
+                        <option value="2" selected>ARC-AGI 2</option>
+                    {% endif %}
+                </select>
+            </div>
+            <div class="filter-group">
                 <label for="dataset">Evaluate Against</label>
                 <select id="dataset" name="dataset" style="background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; font-size: 13px;">
-                    <option value="evaluation">Evaluation (120 puzzles)</option>
-                    <option value="training">Training (1,000 puzzles)</option>
-                    <option value="test">Test (240 puzzles)</option>
+                    <!-- Will be populated by JavaScript based on version selection -->
                 </select>
             </div>
             <div class="filter-group">
@@ -48,4 +60,9 @@
 <div id="evaluation-results"></div>
 
 </div>
+
+<!-- Pass version/dataset structure to JavaScript -->
+<script>
+window.VERSION_OPTIONS = {{ version_options | tojson if version_options is defined else '[]' }};
+</script>
 {% endblock %}
