@@ -6,25 +6,38 @@ A small **FastAPI** + **Jinja2** web UI to browse [ARC-AGI 2](https://arcprize.o
 
 ## Setup
 
-Requires Python 3.10+ (recommended).
+Requires Python 3.10+.
+
+Use [Astral uv](https://docs.astral.sh/uv/) to manage the environment and install dependencies from [`requirements.txt`](requirements.txt):
 
 ```bash
-python -m venv .venv
+# Install uv: https://docs.astral.sh/uv/getting-started/
+
+uv venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install fastapi uvicorn jinja2 python-multipart
+uv pip install -r requirements.txt
 ```
 
 JSON datasets live under `data/` (included in this repo).
 
 ## Run
 
-From the repository root:
+From the repository root (with the virtual environment activated):
 
 ```bash
 uvicorn app:app --reload --host 127.0.0.1 --port 8000
 ```
 
 Open [http://127.0.0.1:8000](http://127.0.0.1:8000).
+
+## Docker
+
+```bash
+docker build -t arc-agi-2-explorer .
+docker run --rm -p 8000:8000 arc-agi-2-explorer
+```
+
+Then open [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
 ## License
 
